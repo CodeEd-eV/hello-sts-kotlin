@@ -17,6 +17,8 @@ import io.ktor.features.*
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
+val protocol = System.getenv("PROTOCOL") ?: "http"
+
 @Suppress("unused") // Referenced in application.conf
 @kotlin.jvm.JvmOverloads
 fun Application.module(testing: Boolean = false) {
@@ -39,8 +41,7 @@ fun Application.module(testing: Boolean = false) {
             if(sess != null) {
                 call.respondRedirect("/me")
             }
-            println("Call was made using this scheme: ${call.request.origin.scheme}://${call.request.host()}:${call.request.port()}")
-            val cburl = client.get<String>("https://stscodeed.azurewebsites.net/GET/ad/login?cb=${call.request.origin.scheme}://${call.request.host()}:${call.request.port()}/callback")
+            val cburl = client.get<String>("https://stscodeed.azurewebsites.net/GET/ad/login?cb=$protocol://${call.request.host()}:${call.request.port()}/callback")
 
             call.respondHtml {
                 body {
