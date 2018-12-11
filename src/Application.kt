@@ -21,7 +21,8 @@ fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 @kotlin.jvm.JvmOverloads
 fun Application.module(testing: Boolean = false) {
     install(Sessions) {
-        cookie<MySession>("MY_SESSION") {
+        cookie<CodeedSession>("WHOAMI_SESSION", SessionStorageMemory()) {
+            cookie.path="/"
             cookie.extensions["SameSite"] = "lax"
         }
     }
@@ -31,12 +32,14 @@ fun Application.module(testing: Boolean = false) {
         }
     }
 
-    val callbackUrl = ""
-
     val client = HttpClient(Apache)
     routing {
         get("/") {
-
+            val sess = call.sessions.get<CodeedSession>()
+            if(sess != null) {
+                call.respondRedirect("/me")
+            }
+            println("Call was made using this scheme: ${call.request.origin.scheme}://${call.request.host()}:${call.request.port()}")
             val cburl = client.get<String>("https://stscodeed.azurewebsites.net/GET/ad/login?cb=${call.request.origin.scheme}://${call.request.host()}:${call.request.port()}/callback")
 
             call.respondHtml {
@@ -56,11 +59,19 @@ fun Application.module(testing: Boolean = false) {
 
         get("/callback") {
             val qp = call.request.queryParameters
-            val tok = qp["token"]
+            val tok = qp["token"] ?: error("Wrong.")
             println("Logged in with token $tok")
+            call.sessions.set(CodeedSession(tok))
+            call.respondRedirect("/me")
+        }
+
+        get("/me") {
+            val tok = call.sessions.get<CodeedSession>()?.token
+            if(tok == null) {
+                call.respondRedirect("/")
+            }
             val contents = client.get<String>("https://stscodeed.azurewebsites.net/GET/ad/profile?token=$tok")
-            val gson = Gson()
-            val usr = gson.fromJson(contents, User::class.java)
+            val usr = Gson().fromJson(contents, User::class.java)
             call.respondHtml {
                 body {
                     h1 {
@@ -72,25 +83,19 @@ fun Application.module(testing: Boolean = false) {
                     p {
                         +"Your Principal Name is ${usr.userPrincipalName}."
                     }
-                }
-            }
-        }
-
-        get("/me") {
-
-        }
-
-        get("/html-dsl") {
-            call.respondHtml {
-                body {
-                    h1 { +"HTML" }
-                    ul {
-                        for (n in 1..10) {
-                            li { +"$n" }
+                    p {
+                        a {
+                            href="/logout"
+                            +"Log me out! 😤"
                         }
                     }
                 }
             }
+        }
+
+        get("/logout") {
+            call.sessions.clear<CodeedSession>()
+            call.respondRedirect("/")
         }
 
         // Static feature. Try to access `/static/ktor_logo.svg`
@@ -111,6 +116,8 @@ fun Application.module(testing: Boolean = false) {
 }
 
 data class MySession(val count: Int = 0)
+
+data class CodeedSession(val token: String)
 
 data class User(
     val displayName: String,
