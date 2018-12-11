@@ -29,11 +29,6 @@ fun Application.module(testing: Boolean = false) {
         }
     }
 
-    if(protocol == "https") {
-        install(HttpsRedirect)
-        install(XForwardedHeaderSupport)
-    }
-
     install(ContentNegotiation) {
         gson {
         }
