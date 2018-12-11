@@ -37,7 +37,7 @@ fun Application.module(testing: Boolean = false) {
     routing {
         get("/") {
 
-            val cburl = client.get<String>("https://stscodeed.azurewebsites.net/GET/ad/login?cb=http://${call.request.host()}:${call.request.port()}/callback")
+            val cburl = client.get<String>("https://stscodeed.azurewebsites.net/GET/ad/login?cb=${call.request.origin.scheme}://${call.request.host()}:${call.request.port()}/callback")
 
             call.respondHtml {
                 body {
