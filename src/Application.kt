@@ -29,6 +29,11 @@ fun Application.module(testing: Boolean = false) {
         }
     }
 
+    if(protocol == "https") {
+        install(HttpsRedirect)
+        install(XForwardedHeaderSupport)
+    }
+
     install(ContentNegotiation) {
         gson {
         }
@@ -41,7 +46,7 @@ fun Application.module(testing: Boolean = false) {
             if(sess != null) {
                 call.respondRedirect("/me")
             }
-            val cburl = client.get<String>("https://stscodeed.azurewebsites.net/GET/ad/login?cb=$protocol://${call.request.host()}:${call.request.port()}/callback")
+            val cburl = client.get<String>("https://stscodeed.azurewebsites.net/GET/ad/login?cb=$protocol://${call.request.host()}:${if(protocol != "https") call.request.port().toString() else ""}/callback")
 
             call.respondHtml {
                 body {
