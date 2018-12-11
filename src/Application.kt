@@ -12,8 +12,6 @@ import io.ktor.html.*
 import kotlinx.html.*
 import io.ktor.http.content.*
 import io.ktor.sessions.*
-import io.ktor.gson.*
-import io.ktor.features.*
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
@@ -26,11 +24,6 @@ fun Application.module(testing: Boolean = false) {
         cookie<CodeedSession>("WHOAMI_SESSION", SessionStorageMemory()) {
             cookie.path="/"
             cookie.extensions["SameSite"] = "lax"
-        }
-    }
-
-    install(ContentNegotiation) {
-        gson {
         }
     }
 
@@ -59,9 +52,7 @@ fun Application.module(testing: Boolean = false) {
         }
 
         get("/callback") {
-            val qp = call.request.queryParameters
-            val tok = qp["token"] ?: error("Wrong.")
-            println("Logged in with token $tok")
+            val tok = call.request.queryParameters["token"] ?: error("Wrong.")
             call.sessions.set(CodeedSession(tok))
             call.respondRedirect("/me")
         }
@@ -99,24 +90,11 @@ fun Application.module(testing: Boolean = false) {
             call.respondRedirect("/")
         }
 
-        // Static feature. Try to access `/static/ktor_logo.svg`
         static("/static") {
             resources("static")
         }
-
-        get("/session/increment") {
-            val session = call.sessions.get<MySession>() ?: MySession()
-            call.sessions.set(session.copy(count = session.count + 1))
-            call.respondText("Counter is ${session.count}. Refresh to increment.")
-        }
-
-        get("/json/gson") {
-            call.respond(mapOf("hello" to "world"))
-        }
     }
 }
-
-data class MySession(val count: Int = 0)
 
 data class CodeedSession(val token: String)
 
